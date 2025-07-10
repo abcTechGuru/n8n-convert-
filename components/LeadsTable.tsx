@@ -1,6 +1,7 @@
 import { useState, ReactNode } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Lead } from "@/types/Lead";
+import "../app/globals.css";
 
 const COLUMN_CONFIG = [
   { key: "first_name", label: "First Name" },
@@ -40,7 +41,7 @@ export function LeadsTable({ leads, DownloadButton }: LeadsTableProps) {
 
   return (
     <div
-      className="overflow-x-auto rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 w-full max-w-full"
+      className="overflow-x-auto rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 w-full max-w-full table-scrollbar"
     >
       {/* Search, Download, and page size */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-2 md:px-6 py-2 md:py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-800 rounded-t-2xl ">

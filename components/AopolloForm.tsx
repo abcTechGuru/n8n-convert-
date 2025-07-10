@@ -11,7 +11,7 @@ export function ApolloForm({ onScrape, loading }: { onScrape: (url: string) => v
           e.preventDefault();
           onScrape(url);
         }}
-        className="space-y-4"
+        className="space-y-4 w-full"
       >
         <Input
           placeholder="Apollo Search URL"

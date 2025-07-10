@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { updateScrapeProgress } from "../../../pages/api/scrape-progress";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -20,7 +21,7 @@ interface Lead {
 }
 
 export async function POST(req: NextRequest) {
-  const { apolloUrl, userId } = await req.json();
+  const { apolloUrl, userId, scrapeId } = await req.json();
   // console.log("Apollo URL:", process.env.APIFY_API_KEY);
 
   if (!apolloUrl || !userId) {
@@ -60,29 +61,34 @@ export async function POST(req: NextRequest) {
     // console.log("Raw Leads:", leads);
 
     // 2. Standardize fields (handle nested fields)
-    const standardizedLeads: Lead[] = leads.map((lead: Lead) => ({
-      first_name: lead.first_name,
-      last_name: lead.last_name,
-      email: lead.email,
-      website_url:
-        typeof lead.organization_website_url === "string" && lead.organization_website_url
-          ? lead.organization_website_url
-          : (lead.organization && typeof lead.organization === "object" && typeof (lead.organization as { website_url?: string }).website_url === "string"
-              ? (lead.organization as { website_url?: string }).website_url!
-              : ""),
-      company:
-        typeof lead.organization_name === "string" && lead.organization_name
-          ? lead.organization_name
-          : (lead.organization && typeof lead.organization === "object" && typeof (lead.organization as { name?: string }).name === "string"
-              ? (lead.organization as { name?: string }).name!
-              : ""),
-      headline: lead.headline,
-      location: [lead.city, lead.state, lead.country].filter(Boolean).join(", "),
-      phone_number:
-        lead.organization && typeof lead.organization === "object" && typeof (lead.organization as { phone?: string }).phone === "string"
-          ? (lead.organization as { phone?: string }).phone!
-          : "",
-    }));
+    let processedCount = 0;
+    const standardizedLeads: Lead[] = leads.map((lead: Lead) => {
+      processedCount++;
+      if (scrapeId) updateScrapeProgress(scrapeId, processedCount);
+      return {
+        first_name: lead.first_name,
+        last_name: lead.last_name,
+        email: lead.email,
+        website_url:
+          typeof lead.organization_website_url === "string" && lead.organization_website_url
+            ? lead.organization_website_url
+            : (lead.organization && typeof lead.organization === "object" && typeof (lead.organization as { website_url?: string }).website_url === "string"
+                ? (lead.organization as { website_url?: string }).website_url!
+                : ""),
+        company:
+          typeof lead.organization_name === "string" && lead.organization_name
+            ? lead.organization_name
+            : (lead.organization && typeof lead.organization === "object" && typeof (lead.organization as { name?: string }).name === "string"
+                ? (lead.organization as { name?: string }).name!
+                : ""),
+        headline: lead.headline,
+        location: [lead.city, lead.state, lead.country].filter(Boolean).join(", "),
+        phone_number:
+          lead.organization && typeof lead.organization === "object" && typeof (lead.organization as { phone?: string }).phone === "string"
+            ? (lead.organization as { phone?: string }).phone!
+            : "",
+      };
+    });
     console.log("Standardized Leads:", standardizedLeads.length, "Standardized Leads:");
 
     // 3. Deduplicate per user (relax filter to only require email)
