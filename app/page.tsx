@@ -4,9 +4,10 @@ import { supabase } from "@/utils/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import MainApp from "@/components/Main";
+import { User } from "@supabase/supabase-js";
 
 export default function Home() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
@@ -49,7 +50,7 @@ export default function Home() {
           Sign Out
         </Button>
       </div>
-      <MainApp userId={user.id} email={user.email} />
+      <MainApp />
     </div>
   );
 }

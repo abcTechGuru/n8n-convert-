@@ -16,7 +16,7 @@ interface Lead {
   location: string;
   phone_number: string;
   email_valid?: boolean;
-  [key: string]: any;
+  [key: string]: string | boolean | undefined;
 }
 
 export async function POST(req: NextRequest) {
@@ -60,15 +60,28 @@ export async function POST(req: NextRequest) {
     // console.log("Raw Leads:", leads);
 
     // 2. Standardize fields (handle nested fields)
-    const standardizedLeads: Lead[] = leads.map((lead: any) => ({
+    const standardizedLeads: Lead[] = leads.map((lead: Lead) => ({
       first_name: lead.first_name,
       last_name: lead.last_name,
       email: lead.email,
-      website_url: lead.organization_website_url || (lead.organization && lead.organization.website_url) || "",
-      company: lead.organization_name || (lead.organization && lead.organization.name) || "",
+      website_url:
+        typeof lead.organization_website_url === "string" && lead.organization_website_url
+          ? lead.organization_website_url
+          : (lead.organization && typeof lead.organization === "object" && typeof (lead.organization as { website_url?: string }).website_url === "string"
+              ? (lead.organization as { website_url?: string }).website_url!
+              : ""),
+      company:
+        typeof lead.organization_name === "string" && lead.organization_name
+          ? lead.organization_name
+          : (lead.organization && typeof lead.organization === "object" && typeof (lead.organization as { name?: string }).name === "string"
+              ? (lead.organization as { name?: string }).name!
+              : ""),
       headline: lead.headline,
       location: [lead.city, lead.state, lead.country].filter(Boolean).join(", "),
-      phone_number: (lead.organization && lead.organization.phone) || "",
+      phone_number:
+        lead.organization && typeof lead.organization === "object" && typeof (lead.organization as { phone?: string }).phone === "string"
+          ? (lead.organization as { phone?: string }).phone!
+          : "",
     }));
     console.log("Standardized Leads:", standardizedLeads.length, "Standardized Leads:");
 
@@ -80,7 +93,7 @@ export async function POST(req: NextRequest) {
     if (fetchError) {
       return NextResponse.json({ error: fetchError.message }, { status: 500 });
     }
-    const existingEmails = new Set((existing || []).map((l: any) => l.email));
+    const existingEmails = new Set((existing || []).map((l: { email: string }) => l.email));
     const newLeads: Lead[] = standardizedLeads.filter(
       (lead: Lead) => lead.email && !existingEmails.has(lead.email)
     );
@@ -162,8 +175,11 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ leads: verifiedLeads });
-  } catch (err: any) {
-    console.log("Error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      console.log("Error:", err);
+      return NextResponse.json({ error: err.message }, { status: 500 });
+    }
+    return NextResponse.json({ error: "An unknown error occurred" }, { status: 500 });
   }
 }

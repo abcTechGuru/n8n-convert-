@@ -32,7 +32,7 @@ export default function MainApp() {
       .select("*")
       .eq("user_id", userId)
       .order("id", { ascending: false });
-    if (error) {
+    if (error instanceof Error) {
       setError(error.message);
       setLeads([]);
     } else {
@@ -46,7 +46,6 @@ export default function MainApp() {
     } else {
       setLeads([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   async function handleScrape(apolloUrl: string) {
@@ -67,7 +66,7 @@ export default function MainApp() {
       } else {
         setLeads(data.leads || []);
       }
-    } catch (err) {
+    } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);

@@ -1,9 +1,14 @@
 "use client";
+import { User } from "@supabase/supabase-js";
 import { supabase } from "@/utils/supabaseClient";
 import { useRouter } from "next/navigation";
 import { FiLogOut } from "react-icons/fi";
 
-export default function AuthButton({ user }: { user?: any }) {
+interface AuthButtonProps {
+  user?: User;
+}
+
+export default function AuthButton({ user }: AuthButtonProps) {
   const router = useRouter();
 
   async function signInWithGoogle() {
