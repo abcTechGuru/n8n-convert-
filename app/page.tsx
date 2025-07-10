@@ -42,7 +42,14 @@ export default function Home() {
             <Button
               className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-lg shadow-lg transition text-lg dark:bg-blue-500 dark:hover:bg-blue-600"
               size="lg"
-              onClick={() => supabase.auth.signInWithOAuth({ provider: "google" })}
+              onClick={() => supabase.auth.signInWithOAuth({
+                provider: "google",
+                options: {
+                  redirectTo: typeof window !== "undefined"
+                    ? window.location.origin
+                    : undefined,
+                },
+              })}
             >
               Sign In to Get Started
             </Button>
