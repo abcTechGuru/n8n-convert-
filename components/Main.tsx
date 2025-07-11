@@ -172,7 +172,7 @@ export default function MainApp() {
               {error && <div className="text-red-600 mt-4 text-center font-medium">{error}</div>}
             </section>
             {/* Table Section */}
-            <section className="w-full max-w-5xl mb-10 p-8 flex flex-col items-center bg-gradient-to-br from-white/90 to-gray-100/90 dark:from-gray-900/90 dark:to-gray-800/90 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800">
+            <section className="w-full max-w-5xl mb-10  flex flex-col items-center bg-gradient-to-br from-white/90 to-gray-100/90 dark:from-gray-900/90 dark:to-gray-800/90 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800">
               <LeadsTable leads={leads} DownloadButton={<DownloadButton leads={leads} />} />
             </section>
           </div>
