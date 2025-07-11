@@ -1,14 +1,14 @@
 "use client";
 import { useState, useEffect } from "react";
 import type { User } from "@supabase/supabase-js";
-import { ApolloForm } from "@/components/AopolloForm";
-import { LeadsTable } from "@/components/LeadsTable";
 import { DownloadButton } from "@/components/DownloadButton";
 import type { Lead } from "@/types/Lead";
 import ThemeProvider, { ThemeToggleButton } from "@/components/ThemeProvider";
 import { supabase } from "@/utils/supabaseClient";
 import LoadingModal from "@/components/LoadingModal";
-import AuthButton from "@/components/AuthButton";
+import APIKeysSection from "@/components/APIKeysSection";
+import ApolloFormSection from "@/components/ApolloFormSection";
+import LeadsTableSection from "@/components/LeadsTableSection";
 
 export default function MainApp() {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -18,7 +18,18 @@ export default function MainApp() {
   const [loadingStep, setLoadingStep] = useState<string | undefined>();
   const [scrapedLeadsCount, setScrapedLeadsCount] = useState<number | undefined>();
   const [verifiedLeadsCount, setVerifiedLeadsCount] = useState<number | undefined>();
-  const [showSignIn, setShowSignIn] = useState(false);
+  const [apifyKey, setApifyKey] = useState("");
+  const [reoonKey, setReoonKey] = useState("");
+  const [apifyInput, setApifyInput] = useState("");
+  const [reoonInput, setReoonInput] = useState("");
+  const [showApify, setShowApify] = useState(false);
+  const [showReoon, setShowReoon] = useState(false);
+
+  // Save handler
+  const handleSaveKeys = () => {
+    setApifyKey(apifyInput);
+    setReoonKey(reoonInput);
+  };
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -65,7 +76,12 @@ export default function MainApp() {
       const res = await fetch("/api/scrape", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ apolloUrl, userId: user?.id }),
+        body: JSON.stringify({
+          apolloUrl,
+          userId: user?.id,
+          apifyKey: apifyKey || undefined,
+          reoonKey: reoonKey || undefined,
+        }),
       });
       setLoadingStep("Verifying emails...");
       const data = await res.json();
@@ -111,73 +127,38 @@ export default function MainApp() {
       <div className="fixed top-4 left-4 z-50">
         <ThemeToggleButton />
       </div>
-      {/* Show only landing page if not signed in */}
-      {!user ? (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 px-4 pt-20 pb-10">
-          {/* Landing Content */}
-          <div className="max-w-xl w-full flex flex-col items-center text-center mb-10">
-            <svg className="h-16 w-16 text-blue-600 mb-4" fill="none" viewBox="0 0 48 48">
-              <circle cx="24" cy="24" r="22" stroke="currentColor" strokeWidth="4" />
-              <path d="M24 14v10l7 7" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <h1 className="text-4xl font-extrabold text-white mb-4 drop-shadow-lg">Apollo Lead Scraper</h1>
-            <p className="text-lg text-gray-200 mb-6">
-              Effortlessly scrape, verify, and manage your business leads from Apollo.io.<br/>
-              Fast, secure, and privacy-focused. No manual copy-paste, no hassle.
-            </p>
-            <ul className="text-gray-300 text-base mb-8 space-y-2">
-              <li>✔️ Bulk scrape and verify up to 500 leads at once</li>
-              <li>✔️ Download clean CSVs for your CRM or outreach</li>
-              <li>✔️ Your data is never shared or sold</li>
-            </ul>
-            
+      {/* <div className="fixed top-4 right-4 z-50">
+        <AuthButton />
+      </div> */}
+      <div className="flex flex-col items-center w-full">
+        {/* Top row: API keys and Apollo form side by side on desktop, stacked on mobile */}
+        <div className="w-full max-w-6xl flex flex-col lg:flex-row gap-4 justify-center items-center lg:items-stretch h-full">
+          <div className="flex-1 flex flex-col h-full w-full max-w-xl mx-auto">
+            <ApolloFormSection
+              handleScrape={handleScrape}
+              loading={loading}
+              error={error}
+            />
           </div>
-          {/* Sign In Modal */}
-          {showSignIn && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-              <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 p-10 flex flex-col items-center w-full max-w-md animate-fade-in">
-                <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white text-center mb-4">
-                  Sign in to access <span className="text-blue-600">Apollo Scraper</span>
-                </h2>
-                <p className="text-gray-500 dark:text-gray-300 text-center mb-6">
-                  Securely manage and verify your leads with one click.
-                </p>
-                <AuthButton />
-                <button
-                  onClick={() => setShowSignIn(false)}
-                  className="mt-6 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-sm"
-                >
-                  Cancel
-                </button>
-                <div className="mt-4 text-xs text-gray-400 dark:text-gray-500 text-center">
-                  We never share your data. Authentication is handled securely via Google.
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      ) : (
-        // Main app for authenticated users
-        <div className="min-h-screen bg-transparent">
-          
-          <div className="flex flex-col items-center">
-            {/* Input Section */}
-            <section className="w-full max-w-2xl bg-gradient-to-br from-white/90 to-gray-100/90 dark:from-gray-900/90 dark:to-gray-800/90 rounded-2xl shadow-2xl mt-10 mb-8 p-10 flex flex-col items-center border border-gray-200 dark:border-gray-800">
-              <h1 className="text-4xl font-extrabold mb-3 text-center text-gray-800 dark:text-gray-100 tracking-tight">Apollo Lead Scraper</h1>
-              <p className="text-center text-lg text-gray-600 dark:text-gray-300 mb-8">
-                Welcome! Please enter your Apollo search URL below to begin scraping and verifying your leads.<br/>
-                We will process your data securely and efficiently. Thank you for using our service.
-              </p>
-              <ApolloForm onScrape={handleScrape} loading={loading} />
-              {error && <div className="text-red-600 mt-4 text-center font-medium">{error}</div>}
-            </section>
-            {/* Table Section */}
-            <section className="w-full max-w-5xl mb-10  flex flex-col items-center bg-gradient-to-br from-white/90 to-gray-100/90 dark:from-gray-900/90 dark:to-gray-800/90 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800">
-              <LeadsTable leads={leads} DownloadButton={<DownloadButton leads={leads} />} />
-            </section>
+          <div className="flex-1 flex flex-col h-full w-full max-w-xl mx-auto">
+            <APIKeysSection
+              apifyInput={apifyInput}
+              setApifyInput={setApifyInput}
+              showApify={showApify}
+              setShowApify={setShowApify}
+              reoonInput={reoonInput}
+              setReoonInput={setReoonInput}
+              showReoon={showReoon}
+              setShowReoon={setShowReoon}
+              handleSaveKeys={handleSaveKeys}
+            />
           </div>
         </div>
-      )}
+        {/* Table section: always below, same max-width */}
+        <div className="w-full max-w-6xl">
+          <LeadsTableSection leads={leads} DownloadButton={<DownloadButton leads={leads} />} />
+        </div>
+      </div>
     </ThemeProvider>
   );
 }

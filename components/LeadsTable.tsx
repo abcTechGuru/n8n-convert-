@@ -2,6 +2,7 @@ import { useState, ReactNode } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Lead } from "@/types/Lead";
 import "../app/globals.css";
+import { FaCheckCircle, FaTimesCircle } from "react-icons/fa";
 
 const COLUMN_CONFIG = [
   { key: "first_name", label: "First Name" },
@@ -41,10 +42,10 @@ export function LeadsTable({ leads, DownloadButton }: LeadsTableProps) {
 
   return (
     <div
-      className="overflow-x-auto rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 w-full max-w-full table-scrollbar"
+      className="overflow-x-auto rounded-none md:rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 w-full max-w-full table-scrollbar"
     >
       {/* Search, Download, and page size */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-2 md:px-6 py-2 md:py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-800 rounded-t-2xl ">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-2 md:px-6 py-2 md:py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-800 rounded-t-none sm:rounded-t-2xl ">
         <div className="flex flex-col sm:flex-row flex-1 items-stretch sm:items-center gap-2">
           <input
             type="text"
@@ -114,8 +115,8 @@ export function LeadsTable({ leads, DownloadButton }: LeadsTableProps) {
                 <TableCell className="px-2 md:px-5 py-2 md:py-3">{lead.company}</TableCell>
                 <TableCell className="px-2 md:px-5 py-2 md:py-3">
                   {lead.email_valid
-                    ? <span className="inline-block px-2 md:px-3 py-1 rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs md:text-xs font-semibold shadow">Verified</span>
-                    : <span className="inline-block px-2 md:px-3 py-1 rounded-full bg-red-200 dark:bg-red-900 text-red-800 dark:text-red-200 text-xs md:text-xs font-semibold shadow">Unverified</span>
+                    ? <span title="Verified" aria-label="Verified"><FaCheckCircle className="text-green-500 w-5 h-5 inline" /></span>
+                    : <span title="Unverified" aria-label="Unverified"><FaTimesCircle className="text-red-500 w-5 h-5 inline" /></span>
                   }
                 </TableCell>
               </TableRow>
@@ -125,7 +126,7 @@ export function LeadsTable({ leads, DownloadButton }: LeadsTableProps) {
       </Table>
       {/* Pagination Controls */}
       {totalPages > 1 && (
-        <div className="flex flex-row items-center justify-between px-2 md:px-6 py-3 md:py-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-100 dark:border-gray-800 rounded-b-2xl gap-2 md:gap-0">
+        <div className="flex flex-row items-center justify-between px-2 md:px-6 py-3 md:py-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-100 dark:border-gray-800 rounded-b-none md:rounded-b-2xl gap-2 md:gap-0">
           <button
             onClick={() => setPage(p => Math.max(1, p - 1))}
             disabled={page === 1}
