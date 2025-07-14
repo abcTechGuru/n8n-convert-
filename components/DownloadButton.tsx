@@ -15,7 +15,7 @@ export function DownloadButton({ leads }: { leads: Lead[] }) {
   }
   return (
     <button
-      className="bg-green-600 text-white px-4 py-2 rounded"
+      className="bg-green-600 text-white px-4 py-2 rounded cursor-pointer"
       onClick={download}
     >
       Download CSV

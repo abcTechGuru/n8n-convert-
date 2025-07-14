@@ -20,7 +20,7 @@ interface Lead {
   [key: string]: string | boolean | undefined;
 }
 
-// Function to validate Apify API key
+// Validate Apify API key
 async function validateApifyKey(apifyKey: string): Promise<{ valid: boolean; error?: string }> {
   try {
     const response = await fetch("https://api.apify.com/v2/users/me", {
@@ -29,9 +29,8 @@ async function validateApifyKey(apifyKey: string): Promise<{ valid: boolean; err
         "Content-Type": "application/json"
       }
     });
-
     if (response.ok) {
-      await response.json(); // Just consume the response
+      await response.json();
       return { valid: true };
     } else if (response.status === 401) {
       return { valid: false, error: "Invalid API key" };
@@ -51,8 +50,6 @@ export async function POST(req: NextRequest) {
   if (!apolloUrl || !userId) {
     return NextResponse.json({ error: "Missing Apollo URL or user ID" }, { status: 400 });
   }
-
-  // Require user-provided keys
   if (!apifyKey) {
     return NextResponse.json({ error: "Please input your Apify API key." }, { status: 400 });
   }
@@ -61,17 +58,13 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // Validate Apify API key before starting scraping
-    console.log("Validating Apify API key...");
+    // 1. Validate Apify API key
     const validationResult = await validateApifyKey(apifyKey);
     if (!validationResult.valid) {
-      return NextResponse.json({ 
-        error: `Apify API key validation failed: ${validationResult.error}` 
-      }, { status: 400 });
+      return NextResponse.json({ error: `Apify API key validation failed: ${validationResult.error}` }, { status: 400 });
     }
-    console.log("Apify API key validated successfully");
 
-    // 1. Call Apify Scraper
+    // 2. Scrape with Apify
     const apifyRes = await fetch(
       "https://api.apify.com/v2/acts/code_crafter~apollo-io-scraper/run-sync-get-dataset-items?format=json&clean=true",
       {
@@ -87,16 +80,11 @@ export async function POST(req: NextRequest) {
           getWorkEmails: true,
           totalRecords: 500,
           url: apolloUrl,
-          // sessionToken: 'd2ac941f03876c90490a305202db9eb7',
         }),
       }
     );
-
     if (!apifyRes.ok) {
       const error = await apifyRes.text();
-      console.log("Apify Error:", error);
-      
-      // Provide more specific error messages based on status codes
       if (apifyRes.status === 401) {
         return NextResponse.json({ error: "Invalid Apify API key. Please check your API key and try again." }, { status: 401 });
       } else if (apifyRes.status === 402) {
@@ -107,11 +95,9 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: `Apify scraping failed: ${error}` }, { status: 500 });
       }
     }
-
     const leads: Lead[] = await apifyRes.json();
-    // console.log("Raw Leads:", leads);
 
-    // 2. Standardize fields (handle nested fields)
+    // 3. Standardize and deduplicate leads
     let processedCount = 0;
     const standardizedLeads: Lead[] = leads.map((lead: Lead) => {
       processedCount++;
@@ -140,9 +126,7 @@ export async function POST(req: NextRequest) {
             : "",
       };
     });
-    console.log("Standardized Leads:", standardizedLeads.length, "Standardized Leads:");
 
-    // 3. Deduplicate per user (relax filter to only require email)
     const { data: existing, error: fetchError } = await supabase
       .from("leads")
       .select("email")
@@ -154,13 +138,12 @@ export async function POST(req: NextRequest) {
     const newLeads: Lead[] = standardizedLeads.filter(
       (lead: Lead) => lead.email && !existingEmails.has(lead.email)
     );
-    console.log("New Leads:", newLeads.length, "New Leads:");
 
-    // 4. Email verification (Reoon Bulk)
+    // 4. Bulk email verification (Reoon)
     const emailsToVerify = newLeads.map((lead) => lead.email).filter((email): email is string => Boolean(email));
     let verifiedLeads: Lead[] = [];
     if (emailsToVerify.length > 0) {
-      // Step 1: Create bulk verification task
+      // Create bulk verification task
       const createTaskRes = await fetch(
         "https://emailverifier.reoon.com/api/v1/create-bulk-verification-task/",
         {
@@ -173,43 +156,47 @@ export async function POST(req: NextRequest) {
           }),
         }
       );
-      const createTaskData: {
-        status: string;
-        task_id?: string | number;
-        reason?: string;
-      } = await createTaskRes.json();
+      const createTaskData = await createTaskRes.json();
       if (createTaskData.status !== "success" || !createTaskData.task_id) {
         return NextResponse.json({ error: createTaskData.reason || "Failed to create bulk verification task" }, { status: 500 });
       }
       const taskId = createTaskData.task_id;
 
-      // Step 2: Poll for results
+      // Poll for results
       let results: Record<string, { status: string } & Record<string, unknown>> | undefined;
       for (let i = 0; i < 60; i++) { // up to 2 minutes (2s interval)
         const res = await fetch(
-          `https://emailverifier.reoon.com/api/v1/get-result-bulk-verification-task/?key=${reoonKey}&task_id=${taskId}`
+          `https://emailverifier.reoon.com/api/v1/get-result-bulk-verification-task/?key=${reoonKey}&task_id=${taskId}`,
+          { method: "GET" }
         );
-        const data: {
-          status: string;
-          results?: Record<string, { status: string } & Record<string, unknown>>;
-        } = await res.json();
+        const data = await res.json();
         if (data.status === "completed" && data.results) {
-          results = data.results;
+          // Normalize keys to lowercase and trim whitespace
+          results = {};
+          for (const [key, value] of Object.entries(data.results)) {
+            results[key.toLowerCase().trim()] = value as { status: string } & Record<string, unknown>;
+          }
           break;
+        }
+        if (data.status === "error") {
+          return NextResponse.json({ error: data.reason || "Bulk verification failed" }, { status: 500 });
         }
         await new Promise((r) => setTimeout(r, 2000));
       }
       if (!results) {
         return NextResponse.json({ error: "Bulk email verification timed out or failed." }, { status: 500 });
       }
-      // Step 3: Filter leads by results (status === 'safe')
-      verifiedLeads = newLeads.filter((lead) => {
-        const result = results && lead.email ? results[lead.email] : undefined;
-        return result && result.status === "safe";
-      });
+      // Filter leads by results (status === 'safe') and store verification status
+      verifiedLeads = newLeads.map((lead) => {
+        const email = lead.email?.toLowerCase().trim();
+        const result = email && results ? results[email] : undefined;
+        return {
+          ...lead,
+          email_verification: result ? result.status : "unknown",
+          email_valid: result ? result.status === "safe" : false,
+        };
+      }).filter((lead) => lead.email_valid);
     }
-
-    console.log("Verified Leads:", verifiedLeads.length, "Verified Leads:");
 
     // 5. Save to Supabase
     if (verifiedLeads.length > 0) {
@@ -217,7 +204,6 @@ export async function POST(req: NextRequest) {
         ...lead,
         user_id: userId,
       }));
-      // Deduplicate by user_id and email
       const uniqueUpsertData = Array.from(
         new Map(
           upsertData.map(item => [`${item.user_id}:${item.email}`, item])
@@ -234,7 +220,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ leads: verifiedLeads });
   } catch (err: unknown) {
     if (err instanceof Error) {
-      console.log("Error:", err);
       return NextResponse.json({ error: err.message }, { status: 500 });
     }
     return NextResponse.json({ error: "An unknown error occurred" }, { status: 500 });

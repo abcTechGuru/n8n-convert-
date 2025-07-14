@@ -97,7 +97,7 @@ export default function APIKeysSection({
             <button
               type="button"
               onClick={() => setShowApify(!showApify)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm cursor-pointer"
               tabIndex={-1}
               aria-label={showApify ? "Hide Apify key" : "Show Apify key"}
             >
@@ -121,7 +121,7 @@ export default function APIKeysSection({
             <button
               type="button"
               onClick={() => setShowReoon(!showReoon)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm cursor-pointer"
               tabIndex={-1}
               aria-label={showReoon ? "Hide Reoon key" : "Show Reoon key"}
             >
@@ -135,7 +135,7 @@ export default function APIKeysSection({
             type="button"
             onClick={handleValidateKeys}
             disabled={validating || (!apifyInput && !reoonInput)}
-            className="h-10 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold shadow transition"
+            className="h-10 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold shadow transition cursor-pointer"
           >
             {validating ? "Validating..." : "Validate Keys"}
           </button>
@@ -143,6 +143,7 @@ export default function APIKeysSection({
             type="submit"
             className="h-10 px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow transition"
             disabled={saved}
+            style={{ cursor: saved ? 'not-allowed' : 'pointer' }}
           >
             {saved ? "Saved" : "Save"}
           </button>
@@ -232,7 +233,6 @@ export default function APIKeysSection({
 
       <div className="w-full text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
         These keys are used only for your current session and are not stored.<br/>
-        Leave blank to use the default keys provided by the app owner.
       </div>
     </section>
   );

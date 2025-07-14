@@ -25,27 +25,26 @@ async function validateApifyKey(apifyKey: string): Promise<{ valid: boolean; err
   }
 }
 
-// Function to validate Reoon API key
+// Function to validate Reoon API key using GET /verify endpoint in quick mode
 async function validateReoonKey(reoonKey: string): Promise<{ valid: boolean; error?: string }> {
   try {
-    const response = await fetch("https://emailverifier.reoon.com/api/v1/check-credits/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key: reoonKey })
-    });
+    const url = `https://emailverifier.reoon.com/api/v1/verify?email=test@example.com&key=${encodeURIComponent(reoonKey)}&mode=quick`;
+    const response = await fetch(url, { method: "GET" });
     const data = await response.json();
-    console.log('Reoon API response:', data);
+    console.log("Reoon API /verify quick mode response:", data);
 
     if (response.ok) {
-      if (data.status === "success") {
+      // If the response contains a status, the key is valid
+      if (data.status && data.status !== "error") {
         return { valid: true };
       } else {
         return { valid: false, error: data.reason || "Invalid API key" };
       }
     } else {
-      return { valid: false, error: "Failed to validate Reoon API key" };
+      return { valid: false, error: data.reason || "Failed to validate API key" };
     }
-  } catch {
+  } catch (err) {
+    console.error("Network error while validating Reoon API key:", err);
     return { valid: false, error: "Network error while validating Reoon API key" };
   }
 }

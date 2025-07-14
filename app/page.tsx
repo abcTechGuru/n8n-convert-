@@ -35,9 +35,9 @@ export default function Home() {
               Fast, secure, and privacy-focused. No manual copy-paste, no hassle.
             </p>
             <ul className="text-gray-600 dark:text-gray-300 text-base mb-8 space-y-2">
-              <li>✔️ Bulk scrape and verify up to 500 leads at once</li>
-              <li>✔️ Download clean CSVs for your CRM or outreach</li>
-              <li>✔️ Your data is never shared or sold</li>
+              <li> Bulk scrape and verify up to 500 leads at once</li>
+              <li> Download clean CSVs for your CRM or outreach</li>
+              <li> Your data is never shared or sold</li>
             </ul>
             <Button
               className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-lg shadow-lg transition text-lg dark:bg-blue-500 dark:hover:bg-blue-600"
