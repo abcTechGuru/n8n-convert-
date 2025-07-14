@@ -14,10 +14,37 @@ const COLUMN_CONFIG = [
 
 interface LeadsTableProps {
   leads: Lead[];
+  loading?: boolean;
   DownloadButton?: ReactNode;
 }
 
-export function LeadsTable({ leads, DownloadButton }: LeadsTableProps) {
+// Loading skeleton component
+function LoadingSkeleton() {
+  // 5 skeleton rows, 5 columns
+  return (
+    <>
+      {[...Array(5)].map((_, i) => (
+        <TableRow
+          key={i}
+          className={
+            `transition border-b border-gray-100 dark:border-gray-800 ${i % 2 === 0 ? 'bg-gray-50 dark:bg-gray-900/60' : 'bg-white dark:bg-gray-900'}`
+          }
+        >
+          {COLUMN_CONFIG.map((col, j) => (
+            <TableCell
+              key={j}
+              className="px-2 md:px-5 py-2 md:py-3"
+            >
+              <div className="h-4 md:h-5 w-full bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            </TableCell>
+          ))}
+        </TableRow>
+      ))}
+    </>
+  );
+}
+
+export function LeadsTable({ leads, loading = false, DownloadButton }: LeadsTableProps) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState("");
@@ -53,6 +80,7 @@ export function LeadsTable({ leads, DownloadButton }: LeadsTableProps) {
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1); }}
             className="px-3 md:px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 w-full sm:w-60 md:w-72 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm md:text-base"
+            disabled={loading}
           />
           {DownloadButton}
         </div>
@@ -62,89 +90,115 @@ export function LeadsTable({ leads, DownloadButton }: LeadsTableProps) {
             value={pageSize}
             onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
             className="rounded-lg px-2 py-1 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400 text-xs md:text-base"
+            disabled={loading}
           >
             {[10, 25, 50, 100].map(size => <option key={size} value={size}>{size}</option>)}
           </select>
         </div>
       </div>
-      <Table className="min-w-[400px] md:min-w-[1200px] text-xs md:text-base">
-        <TableHeader>
-          <TableRow className="bg-gray-100 dark:bg-gray-800 sticky top-0 z-10 rounded-t-2xl">
-            {COLUMN_CONFIG.map(({ key, label }) => (
-              <TableHead
-                key={key}
-                className="font-semibold text-xs md:text-base text-gray-700 dark:text-gray-200 px-2 md:px-5 py-2 md:py-4 cursor-pointer select-none whitespace-normal md:whitespace-nowrap break-words"
-                onClick={() => {
-                  if (sortKey === key) setSortAsc(!sortAsc);
-                  else { setSortKey(key as keyof Lead); setSortAsc(true); }
-                }}
-                aria-sort={sortKey === key ? (sortAsc ? "ascending" : "descending") : "none"}
-              >
-                {label}
-                {sortKey === key && (sortAsc ? " ▲" : " ▼")}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {paginated.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={5} className="text-center py-8 md:py-12 text-gray-400 dark:text-gray-500 text-base md:text-lg">
-                No leads found. Please adjust your search or scrape new leads.
-              </TableCell>
-            </TableRow>
-          ) : (
-            paginated.map((lead, i) => (
-              <TableRow
-                key={i}
-                className={
-                  `transition border-b border-gray-100 dark:border-gray-800 ${i % 2 === 0 ? 'bg-gray-50 dark:bg-gray-900/60' : 'bg-white dark:bg-gray-900'} hover:bg-blue-50 dark:hover:bg-blue-900/40`
-                }
-              >
-                <TableCell className="px-2 md:px-5 py-2 md:py-3">{lead.first_name}</TableCell>
-                <TableCell className="px-2 md:px-5 py-2 md:py-3">{lead.last_name}</TableCell>
-                <TableCell className="px-2 md:px-5 py-2 md:py-3 font-mono text-blue-700 dark:text-blue-300 flex items-center gap-2">
-                  {lead.email}
-                  <button
-                    onClick={() => navigator.clipboard.writeText(lead.email)}
-                    className="ml-1 text-xs text-gray-400 hover:text-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 rounded"
-                    title="Copy email"
-                    aria-label="Copy email"
-                  >📋</button>
-                </TableCell>
-                <TableCell className="px-2 md:px-5 py-2 md:py-3">{lead.company}</TableCell>
-                <TableCell className="px-2 md:px-5 py-2 md:py-3">
-                  {lead.email_valid
-                    ? <span title="Verified" aria-label="Verified"><FaCheckCircle className="text-green-500 w-5 h-5 inline" /></span>
-                    : <span title="Unverified" aria-label="Unverified"><FaTimesCircle className="text-red-500 w-5 h-5 inline" /></span>
-                  }
-                </TableCell>
+      
+      {loading ? (
+        <div className="min-h-[400px] flex flex-col">
+          <Table className="min-w-[400px] md:min-w-[1200px] text-xs md:text-base">
+            <TableHeader>
+              <TableRow className="bg-gray-100 dark:bg-gray-800 sticky top-0 z-10 rounded-t-2xl">
+                {COLUMN_CONFIG.map(({ key, label }) => (
+                  <TableHead
+                    key={key}
+                    className="font-semibold text-xs md:text-base text-gray-700 dark:text-gray-200 px-2 md:px-5 py-2 md:py-4 cursor-pointer select-none whitespace-normal md:whitespace-nowrap break-words"
+                  >
+                    {label}
+                  </TableHead>
+                ))}
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-      {/* Pagination Controls */}
-      {totalPages > 1 && (
-        <div className="flex flex-row items-center justify-between px-2 md:px-6 py-3 md:py-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-100 dark:border-gray-800 rounded-b-none md:rounded-b-2xl gap-2 md:gap-0">
-          <button
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="px-3 md:px-4 py-2 rounded-lg disabled:opacity-50 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 transition focus:outline-none focus:ring-2 focus:ring-blue-400 text-xs md:text-base"
-          >
-            Previous
-          </button>
-          <span className="text-xs md:text-sm text-gray-600 dark:text-gray-300">
-            Page {page} of {totalPages}
-          </span>
-          <button
-            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="px-3 md:px-4 py-2 rounded-lg disabled:opacity-50 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 transition focus:outline-none focus:ring-2 focus:ring-blue-400 text-xs md:text-base"
-          >
-            Next
-          </button>
+            </TableHeader>
+            <TableBody>
+              <LoadingSkeleton />
+            </TableBody>
+          </Table>
         </div>
+      ) : (
+        <>
+          <Table className="min-w-[400px] md:min-w-[1200px] text-xs md:text-base">
+            <TableHeader>
+              <TableRow className="bg-gray-100 dark:bg-gray-800 sticky top-0 z-10 rounded-t-2xl">
+                {COLUMN_CONFIG.map(({ key, label }) => (
+                  <TableHead
+                    key={key}
+                    className="font-semibold text-xs md:text-base text-gray-700 dark:text-gray-200 px-2 md:px-5 py-2 md:py-4 cursor-pointer select-none whitespace-normal md:whitespace-nowrap break-words"
+                    onClick={() => {
+                      if (sortKey === key) setSortAsc(!sortAsc);
+                      else { setSortKey(key as keyof Lead); setSortAsc(true); }
+                    }}
+                    aria-sort={sortKey === key ? (sortAsc ? "ascending" : "descending") : "none"}
+                  >
+                    {label}
+                    {sortKey === key && (sortAsc ? " ▲" : " ▼")}
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginated.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 md:py-12 text-gray-400 dark:text-gray-500 text-base md:text-lg">
+                    No leads found. Please adjust your search or scrape new leads.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginated.map((lead, i) => (
+                  <TableRow
+                    key={i}
+                    className={
+                      `transition border-b border-gray-100 dark:border-gray-800 ${i % 2 === 0 ? 'bg-gray-50 dark:bg-gray-900/60' : 'bg-white dark:bg-gray-900'} hover:bg-blue-50 dark:hover:bg-blue-900/40`
+                    }
+                  >
+                    <TableCell className="px-2 md:px-5 py-2 md:py-3">{lead.first_name}</TableCell>
+                    <TableCell className="px-2 md:px-5 py-2 md:py-3">{lead.last_name}</TableCell>
+                    <TableCell className="px-2 md:px-5 py-2 md:py-3 font-mono text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                      {lead.email}
+                      <button
+                        onClick={() => navigator.clipboard.writeText(lead.email)}
+                        className="ml-1 text-xs text-gray-400 hover:text-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 rounded"
+                        title="Copy email"
+                        aria-label="Copy email"
+                      >📋</button>
+                    </TableCell>
+                    <TableCell className="px-2 md:px-5 py-2 md:py-3">{lead.company}</TableCell>
+                    <TableCell className="px-2 md:px-5 py-2 md:py-3">
+                      {lead.email_valid
+                        ? <span title="Verified" aria-label="Verified"><FaCheckCircle className="text-green-500 w-5 h-5 inline" /></span>
+                        : <span title="Unverified" aria-label="Unverified"><FaTimesCircle className="text-red-500 w-5 h-5 inline" /></span>
+                      }
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex flex-row items-center justify-between px-2 md:px-6 py-3 md:py-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-100 dark:border-gray-800 rounded-b-none md:rounded-b-2xl gap-2 md:gap-0">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-3 md:px-4 py-2 rounded-lg disabled:opacity-50 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 transition focus:outline-none focus:ring-2 focus:ring-blue-400 text-xs md:text-base"
+              >
+                Previous
+              </button>
+              <span className="text-xs md:text-sm text-gray-600 dark:text-gray-300">
+                Page {page} of {totalPages}
+              </span>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="px-3 md:px-4 py-2 rounded-lg disabled:opacity-50 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 transition focus:outline-none focus:ring-2 focus:ring-blue-400 text-xs md:text-base"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -20,17 +20,58 @@ interface Lead {
   [key: string]: string | boolean | undefined;
 }
 
+// Function to validate Apify API key
+async function validateApifyKey(apifyKey: string): Promise<{ valid: boolean; error?: string }> {
+  try {
+    const response = await fetch("https://api.apify.com/v2/users/me", {
+      headers: {
+        "Authorization": `Bearer ${apifyKey}`,
+        "Content-Type": "application/json"
+      }
+    });
+
+    if (response.ok) {
+      await response.json(); // Just consume the response
+      return { valid: true };
+    } else if (response.status === 401) {
+      return { valid: false, error: "Invalid API key" };
+    } else if (response.status === 403) {
+      return { valid: false, error: "API key doesn't have required permissions" };
+    } else {
+      return { valid: false, error: "Failed to validate API key" };
+    }
+  } catch {
+    return { valid: false, error: "Network error while validating API key" };
+  }
+}
+
 export async function POST(req: NextRequest) {
-  const { apolloUrl, userId, scrapeId } = await req.json();
-  // console.log("Apollo URL:", process.env.APIFY_API_KEY);
+  const { apolloUrl, userId, scrapeId, apifyKey, reoonKey } = await req.json();
 
   if (!apolloUrl || !userId) {
     return NextResponse.json({ error: "Missing Apollo URL or user ID" }, { status: 400 });
   }
 
-  try {
-    // 1. Call Apify Scraper
+  // Require user-provided keys
+  if (!apifyKey) {
+    return NextResponse.json({ error: "Please input your Apify API key." }, { status: 400 });
+  }
+  if (!reoonKey) {
+    return NextResponse.json({ error: "Please input your Reoon API key." }, { status: 400 });
+  }
 
+  try {
+    // Validate Apify API key before starting scraping
+    console.log("Validating Apify API key...");
+    const validationResult = await validateApifyKey(apifyKey);
+    if (!validationResult.valid) {
+      return NextResponse.json({ 
+        error: `Apify API key validation failed: ${validationResult.error}` 
+      }, { status: 400 });
+    }
+    console.log("Apify API key validated successfully");
+
+    // 1. Call Apify Scraper
     const apifyRes = await fetch(
       "https://api.apify.com/v2/acts/code_crafter~apollo-io-scraper/run-sync-get-dataset-items?format=json&clean=true",
       {
@@ -38,7 +79,7 @@ export async function POST(req: NextRequest) {
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.APIFY_API_KEY}`,
+          Authorization: `Bearer ${apifyKey}`,
         },
         body: JSON.stringify({
           getPersonalEmails: true,
@@ -54,7 +95,17 @@ export async function POST(req: NextRequest) {
     if (!apifyRes.ok) {
       const error = await apifyRes.text();
       console.log("Apify Error:", error);
-      return NextResponse.json({ error }, { status: 500 });
+      
+      // Provide more specific error messages based on status codes
+      if (apifyRes.status === 401) {
+        return NextResponse.json({ error: "Invalid Apify API key. Please check your API key and try again." }, { status: 401 });
+      } else if (apifyRes.status === 402) {
+        return NextResponse.json({ error: "Apify account has insufficient credits. Please add credits to your Apify account." }, { status: 402 });
+      } else if (apifyRes.status === 429) {
+        return NextResponse.json({ error: "Rate limit exceeded. Please wait a moment and try again." }, { status: 429 });
+      } else {
+        return NextResponse.json({ error: `Apify scraping failed: ${error}` }, { status: 500 });
+      }
     }
 
     const leads: Lead[] = await apifyRes.json();
@@ -118,7 +169,7 @@ export async function POST(req: NextRequest) {
           body: JSON.stringify({
             name: "Apollo Bulk Verify",
             emails: emailsToVerify,
-            key: process.env.REOON_API_KEY,
+            key: reoonKey,
           }),
         }
       );
@@ -136,7 +187,7 @@ export async function POST(req: NextRequest) {
       let results: Record<string, { status: string } & Record<string, unknown>> | undefined;
       for (let i = 0; i < 60; i++) { // up to 2 minutes (2s interval)
         const res = await fetch(
-          `https://emailverifier.reoon.com/api/v1/get-result-bulk-verification-task/?key=${process.env.REOON_API_KEY}&task_id=${taskId}`
+          `https://emailverifier.reoon.com/api/v1/get-result-bulk-verification-task/?key=${reoonKey}&task_id=${taskId}`
         );
         const data: {
           status: string;

@@ -13,6 +13,7 @@ import LeadsTableSection from "@/components/LeadsTableSection";
 export default function MainApp() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(false);
+  const [tableLoading, setTableLoading] = useState(false);
   const [error, setError] = useState("");
   const [user, setUser] = useState<User | null>(null);
   const [loadingStep, setLoadingStep] = useState<string | undefined>();
@@ -44,16 +45,24 @@ export default function MainApp() {
   }, []);
 
   async function fetchUserLeads(userId: string) {
-    const { data, error } = await supabase
-      .from("leads")
-      .select("*")
-      .eq("user_id", userId)
-      .order("id", { ascending: false });
-    if (error instanceof Error) {
-      setError(error.message);
+    setTableLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("leads")
+        .select("*")
+        .eq("user_id", userId)
+        .order("id", { ascending: false });
+      if (error instanceof Error) {
+        setError(error.message);
+        setLeads([]);
+      } else {
+        setLeads(data || []);
+      }
+    } catch {
+      setError("Failed to fetch leads");
       setLeads([]);
-    } else {
-      setLeads(data || []);
+    } finally {
+      setTableLoading(false);
     }
   }
 
@@ -62,6 +71,7 @@ export default function MainApp() {
       fetchUserLeads(user.id);
     } else {
       setLeads([]);
+      setTableLoading(false);
     }
   }, [user]);
 
@@ -72,6 +82,21 @@ export default function MainApp() {
     setLeads([]);
     setScrapedLeadsCount(undefined);
     setVerifiedLeadsCount(undefined);
+
+    // Require user-provided keys before proceeding
+    if (!apifyKey) {
+      setError("Please input your Apify API key.");
+      setLoading(false);
+      setLoadingStep(undefined);
+      return;
+    }
+    if (!reoonKey) {
+      setError("Please input your Reoon API key.");
+      setLoading(false);
+      setLoadingStep(undefined);
+      return;
+    }
+
     try {
       const res = await fetch("/api/scrape", {
         method: "POST",
@@ -79,8 +104,8 @@ export default function MainApp() {
         body: JSON.stringify({
           apolloUrl,
           userId: user?.id,
-          apifyKey: apifyKey || undefined,
-          reoonKey: reoonKey || undefined,
+          apifyKey,
+          reoonKey,
         }),
       });
       setLoadingStep("Verifying emails...");
@@ -156,7 +181,11 @@ export default function MainApp() {
         </div>
         {/* Table section: always below, same max-width */}
         <div className="w-full max-w-6xl">
-          <LeadsTableSection leads={leads} DownloadButton={<DownloadButton leads={leads} />} />
+          <LeadsTableSection 
+            leads={leads} 
+            loading={tableLoading}
+            DownloadButton={<DownloadButton leads={leads} />} 
+          />
         </div>
       </div>
     </ThemeProvider>
